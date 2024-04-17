@@ -1,0 +1,16 @@
+[package]
+name = "rusty-obegraensad"
+version = "0.1.0"
+authors = ["Ane Johanson"]
+description = "Display custom animations on IKEA's OBEGRÄNSAD using Rust on the Raspberry Pico"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cortex-m = "0.7"
+cortex-m-rt = "0.7"
+embedded-hal = "1.0"
+fugit = "0.3"
+panic-halt = "0.2"
+rp-pico = "0.9"
