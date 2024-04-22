@@ -1,5 +1,5 @@
 # Rusty OBEGRÄNSAD
-Display custom animations on IKEA's OBEGRÄNSAD using Rust on the Raspberry Pico.
+Display custom animations on IKEA's OBEGRÄNSAD using Rust on the Raspberry Pi Pico.
 
 ## Generating a UF2 binary
 Ensure that Rust is up-to-date, target support for `thumbv6m-none-eabi` is provided, and elf2uf2-rs is installed:
