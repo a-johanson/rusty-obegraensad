@@ -13,4 +13,5 @@ cortex-m-rt = "0.7"
 embedded-hal = "1.0"
 fugit = "0.3"
 panic-halt = "0.2"
+portable-atomic = { version = "1.6", default-features = false, features = ["require-cas", "critical-section"] }
 rp-pico = "0.9"
