@@ -66,7 +66,7 @@ fn main() -> ! {
     let spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
-        500.kHz(),
+        1.MHz(),
         embedded_hal::spi::MODE_0,
     );
 
@@ -76,7 +76,7 @@ fn main() -> ! {
     let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.enable_interrupt();
-    let frame_duration = MicrosDurationU32::millis(500);
+    let frame_duration = MicrosDurationU32::millis(200);
     alarm0.schedule(frame_duration).unwrap();
     cortex_m::interrupt::free(|cs| {
         ALARM0.borrow(cs).replace(Some(alarm0));
@@ -127,9 +127,6 @@ fn main() -> ! {
         pin_led.set_high().unwrap();
 
         // Finish the latch pulse and enable display (in case it was disable before)
-        cortex_m::asm::nop();
-        cortex_m::asm::nop();
-        cortex_m::asm::nop();
         cortex_m::asm::nop();
         cortex_m::asm::nop();
         cortex_m::asm::nop();
