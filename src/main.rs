@@ -5,17 +5,16 @@ mod display;
 
 use core::cell::RefCell;
 
-use rp_pico::entry;
+use rp_pico::entry; // rp_pico = Board Support Package (BSP; https://github.com/rp-rs/rp-hal-boards/)
 use panic_halt as _;
-// use rp_pico::hal::prelude::*;
-use rp_pico::hal; // Hardware Abstraction Layer (higher-level drivers)
-use rp_pico::hal::pac; // Peripheral Access Crate (low-level register access)
+use rp_pico::hal; // Hardware Abstraction Layer for Raspberry Silicon (higher-level drivers; https://github.com/rp-rs/rp-hal/)
+use rp_pico::hal::pac; // Peripheral Access Crate (low-level register access; https://github.com/rp-rs/rp2040-pac)
 use rp_pico::hal::pac::interrupt;
 use rp_pico::hal::timer::{Alarm, Alarm0};
 use rp_pico::hal::gpio::{FunctionSpi, PinState};
 use rp_pico::hal::dma::{single_buffer, DMAExt};
 use rp_pico::hal::Clock;
-use embedded_hal::digital::OutputPin;
+use embedded_hal::digital::OutputPin; // General Hardware Abstraction Layer for embedded systems (https://github.com/rust-embedded/embedded-hal)
 use cortex_m::interrupt::Mutex;
 use cortex_m::singleton;
 
@@ -35,7 +34,6 @@ fn main() -> ! {
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
     // Configure the clocks (125 MHz system clock)
-    // TODO: do I need to do anything here to make WFI energy-efficient by pruning the clock tree?
     let clocks = hal::clocks::init_clocks_and_plls(
         rp_pico::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
@@ -45,6 +43,10 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     ).unwrap();
+
+    // To make WFI more energy-efficient, we could pruning the clock tree.
+    // This can be done by selecting the respective bits in a rp_pico::hal::clocks::ClockGate
+    // and by applying this config via clocks.configure_sleep_enable(cg_config);
 
     // Set up peripherals (GPIO, SPI, DMA, Timer/Alarm)
     let sio = hal::Sio::new(pac.SIO); // single-cycle IO
@@ -58,15 +60,13 @@ fn main() -> ! {
     let mut pin_led = pins.led.into_push_pull_output_in_state(PinState::High);
     let mut pin_latch = pins.gpio21.into_push_pull_output_in_state(PinState::Low);
 
-    // TODO: set power regulator mode (PFM (low; default) vs PWM (high)) controlled via GPIO23 (pins.b_power_save)
-
     let pin_clock = pins.gpio18.into_function::<FunctionSpi>();
     let pin_data = pins.gpio19.into_function::<FunctionSpi>();
     let spi = hal::spi::Spi::<_, _, _, 8>::new(pac.SPI0, (pin_data, pin_clock));
     let spi = spi.init(
         &mut pac.RESETS,
         clocks.peripheral_clock.freq(),
-        1.MHz(),
+        2.MHz(),
         embedded_hal::spi::MODE_0,
     );
 
