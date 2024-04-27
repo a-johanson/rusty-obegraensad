@@ -1,6 +1,8 @@
 #![no_std]
 #![no_main]
 
+mod animation;
+mod animation_leaves;
 mod display;
 
 use core::cell::RefCell;
@@ -19,8 +21,9 @@ use cortex_m::interrupt::Mutex;
 use cortex_m::singleton;
 
 use portable_atomic::{AtomicU8, Ordering};
-use fugit::MicrosDurationU32;
-use fugit::RateExtU32;
+use fugit::{MicrosDurationU32, RateExtU32};
+
+use animation::Animation;
 
 // TODO: look at https://github.com/knurling-rs/flip-link
 
@@ -76,8 +79,8 @@ fn main() -> ! {
     let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.enable_interrupt();
-    let frame_duration = MicrosDurationU32::millis(200);
-    alarm0.schedule(frame_duration).unwrap();
+    // Delay to transmit the initial blank frame and to activate the display
+    alarm0.schedule(MicrosDurationU32::millis(10)).unwrap();
     cortex_m::interrupt::free(|cs| {
         ALARM0.borrow(cs).replace(Some(alarm0));
     });
@@ -87,13 +90,14 @@ fn main() -> ! {
     }
 
     let mut display = display::ObegraensadDisplay::new();
+    let mut animation = animation_leaves::FallingLeaves::new();
     let dma_buffer = singleton!(: [u8; 32] = [0; 32]).unwrap();
     let mut dma_ch_opt = Some(dma_channel);
     let mut spi_opt = Some(spi);
     let mut dma_buffer_opt = Some(dma_buffer);
-    let mut frame_count: u32 = 0;
+    let mut current_frame_duration = MicrosDurationU32::millis(10);
     loop {
-        // start to transmit display content via SPI fed via DMA
+        // start to transmit display content (current frame) via SPI fed via DMA
         let dma_channel = dma_ch_opt.take().unwrap();
         let spi = spi_opt.take().unwrap();
         let dma_buffer = dma_buffer_opt.take().unwrap();
@@ -101,12 +105,7 @@ fn main() -> ! {
         let spi_dma_transfer = single_buffer::Config::new(dma_channel, dma_buffer, spi).start();
 
         // compute next frame
-        display.clear();
-        let pixel_idx: u8 = (frame_count & 0xFF) as u8;
-        let x = pixel_idx & 0x0F;
-        let y = pixel_idx >> 4;
-        display.set_pixel(x, y);
-        frame_count += 1;
+        let next_frame_duration = animation.render_frame(&mut display);
 
         // Disable the activity LED and sleep until it's time to transmit the next frame
         pin_led.set_low().unwrap();
@@ -114,17 +113,20 @@ fn main() -> ! {
             cortex_m::asm::wfi();
         }
 
-        // Start pulsing the latch pin to show the previous frame
+        // Start pulsing the latch pin to show the current frame
         pin_latch.set_high().unwrap();
 
-        // Reset frame transmission status and re-schedule the timer
+        // Reset frame transmission status and re-schedule the timer to determine how long the current frame should be shown
         TRANSMIT_NEXT_FRAME.store(0, Ordering::Relaxed);
         cortex_m::interrupt::free(|cs| {
-            ALARM0.borrow(cs).borrow_mut().as_mut().unwrap().schedule(frame_duration).unwrap();
+            ALARM0.borrow(cs).borrow_mut().as_mut().unwrap().schedule(current_frame_duration).unwrap();
         });
 
         // Enable the activity LED
         pin_led.set_high().unwrap();
+
+        // Ensure that upon the next transmission cycle, we display the next frame for the designated amount of time
+        current_frame_duration = next_frame_duration;
 
         // Finish the latch pulse and enable display (in case it was disable before)
         cortex_m::asm::nop();
