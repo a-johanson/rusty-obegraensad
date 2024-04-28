@@ -78,10 +78,14 @@ fn main() -> ! {
     let dma = pac.DMA.split(&mut pac.RESETS);
     let dma_channel = dma.ch0;
 
+    let core = pac::CorePeripherals::take().unwrap();
+    let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    delay.delay_ms(10); // Delaying here for a bit seems to help with spurious button presses at startup
+
     let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.enable_interrupt();
-    // Delay to transmit the initial blank frame and to activate the display
+    // Alarm to transmit the initial blank frame and to activate the display
     alarm0.schedule(MicrosDurationU32::millis(10)).unwrap();
     cortex_m::interrupt::free(|cs| {
         ALARM0.borrow(cs).replace(Some(alarm0));
@@ -109,9 +113,12 @@ fn main() -> ! {
             current_frame_duration = MicrosDurationU32::millis(10);
             current_animation = (current_animation + 1) % ANIMATION_COUNT;
 
-            // wait until the button is released (TODO: debounce)
-            while pin_button.is_low().unwrap() {
-                cortex_m::asm::nop();
+            // wait until the button is released
+            loop {
+                delay.delay_ms(20);
+                if pin_button.is_high().unwrap() {
+                    break;
+                }
             }
 
             // re-schedule the alarm
