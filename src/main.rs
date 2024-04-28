@@ -3,6 +3,7 @@
 
 mod animation;
 mod animation_leaves;
+mod animation_drops;
 mod display;
 
 use core::cell::RefCell;
@@ -16,7 +17,7 @@ use rp_pico::hal::timer::{Alarm, Alarm0};
 use rp_pico::hal::gpio::{FunctionSpi, PinState};
 use rp_pico::hal::dma::{single_buffer, DMAExt};
 use rp_pico::hal::Clock;
-use embedded_hal::digital::OutputPin; // General Hardware Abstraction Layer for embedded systems (https://github.com/rust-embedded/embedded-hal)
+use embedded_hal::digital::{InputPin, OutputPin}; // General Hardware Abstraction Layer for embedded systems (https://github.com/rust-embedded/embedded-hal)
 use cortex_m::interrupt::Mutex;
 use cortex_m::singleton;
 
@@ -62,6 +63,7 @@ fn main() -> ! {
     let mut pin_not_enable = pins.gpio20.into_push_pull_output_in_state(PinState::High);
     let mut pin_led = pins.led.into_push_pull_output_in_state(PinState::High);
     let mut pin_latch = pins.gpio21.into_push_pull_output_in_state(PinState::Low);
+    let mut pin_button = pins.gpio22.into_pull_up_input();
 
     let pin_clock = pins.gpio18.into_function::<FunctionSpi>();
     let pin_data = pins.gpio19.into_function::<FunctionSpi>();
@@ -90,13 +92,35 @@ fn main() -> ! {
     }
 
     let mut display = display::ObegraensadDisplay::new();
-    let mut animation = animation_leaves::FallingLeaves::new();
+    let mut current_animation: u8 = 0;
+    const ANIMATION_COUNT: u8 = 2;
+    let mut animation_leaves = animation_leaves::FallingLeaves::new();
+    let mut animation_drops = animation_drops::DropAnimation::new();
     let dma_buffer = singleton!(: [u8; 32] = [0; 32]).unwrap();
     let mut dma_ch_opt = Some(dma_channel);
     let mut spi_opt = Some(spi);
     let mut dma_buffer_opt = Some(dma_buffer);
     let mut current_frame_duration = MicrosDurationU32::millis(10);
     loop {
+        // if the button is pressed...
+        if pin_button.is_low().unwrap() {
+            // clear the display, set a short frame duration, change animation index
+            display.clear();
+            current_frame_duration = MicrosDurationU32::millis(10);
+            current_animation = (current_animation + 1) % ANIMATION_COUNT;
+
+            // wait until the button is released (TODO: debounce)
+            while pin_button.is_low().unwrap() {
+                cortex_m::asm::nop();
+            }
+
+            // re-schedule the alarm
+            cortex_m::interrupt::free(|cs| {
+                ALARM0.borrow(cs).borrow_mut().as_mut().unwrap().schedule(current_frame_duration).unwrap();
+            });
+            TRANSMIT_NEXT_FRAME.store(0, Ordering::Relaxed);
+        }
+
         // start to transmit display content (current frame) via SPI fed via DMA
         let dma_channel = dma_ch_opt.take().unwrap();
         let spi = spi_opt.take().unwrap();
@@ -105,7 +129,11 @@ fn main() -> ! {
         let spi_dma_transfer = single_buffer::Config::new(dma_channel, dma_buffer, spi).start();
 
         // compute next frame
-        let next_frame_duration = animation.render_frame(&mut display);
+        let next_frame_duration = if current_animation == 0 {
+            animation_leaves.render_frame(&mut display)
+        } else {
+            animation_drops.render_frame(&mut display)
+        };
 
         // Disable the activity LED and sleep until it's time to transmit the next frame
         pin_led.set_low().unwrap();
