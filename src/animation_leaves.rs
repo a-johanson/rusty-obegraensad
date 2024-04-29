@@ -1,5 +1,6 @@
 use crate::animation::Animation;
-use crate::display::ObegraensadDisplay;
+use crate::display;
+use display::ObegraensadDisplay;
 
 use rand::{RngCore, SeedableRng};
 use rand_xoshiro::Xoroshiro128StarStar;
@@ -9,6 +10,7 @@ use fugit::MicrosDurationU32;
 struct Leave {
     x: u8,
     y: u8,
+    value: u8,
 }
 
 impl Leave {
@@ -16,6 +18,7 @@ impl Leave {
         Self {
             x: 0,
             y: 0xFF,
+            value: display::LAYER_COUNT as u8
         }
     }
 
@@ -26,6 +29,11 @@ impl Leave {
     fn init(&mut self, r: u32) {
         self.x = (r & 0xF) as u8;
         self.y = 0;
+        self.value = match (r >> 4) & 0b11 {
+            0 => 1,
+            1 => 2,
+            _ => 3,
+        };
     }
 
     fn step(&mut self, r: u32) {
@@ -41,7 +49,7 @@ impl Leave {
     }
 }
 
-const MAX_LEAVES: usize = 10;
+const MAX_LEAVES: usize = 12;
 
 pub struct FallingLeaves {
     rng: Xoroshiro128StarStar,
@@ -80,7 +88,7 @@ impl Animation for FallingLeaves {
         display.clear();
         for leave in self.leaves.iter() {
             if leave.is_active() {
-                display.set_pixel(leave.x, leave.y);
+                display.set_pixel(leave.x, leave.y, leave.value);
             }
         }
 
