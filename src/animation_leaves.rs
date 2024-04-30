@@ -10,7 +10,6 @@ use fugit::MicrosDurationU32;
 struct Leave {
     x: u8,
     y: u8,
-    value: u8,
 }
 
 impl Leave {
@@ -18,38 +17,31 @@ impl Leave {
         Self {
             x: 0,
             y: 0xFF,
-            value: display::LAYER_COUNT as u8
         }
     }
 
     fn is_active(&self) -> bool {
-        self.y < 16
+        self.y < display::DISPLAY_SIZE as u8
     }
 
     fn init(&mut self, r: u32) {
         self.x = (r & 0xF) as u8;
         self.y = 0;
-        self.value = match (r >> 4) & 0b11 {
-            0 => 1,
-            1 => 2,
-            _ => 3,
-        };
     }
 
     fn step(&mut self, r: u32) {
         let t = (r & 0b111) as u8;
-        if t < 5 { // 5/8 chance to go right (for t == 0, it does not got down)
-            self.x += 1;
-        } else if t == 5 { // 1/8 chance to go left
-            self.x -= 1;
-        } // 2/8 chance to not move horizontally
-
+        match t {
+            0..=4 => self.x += 1, // 5/8 chance to go right
+            5     => self.x -= 1, // 1/8 chance to go left
+            _     => ()           // 2/8 chance to not move horizontally
+        }
         self.x &= 0x0F;
         self.y += 1;
     }
 }
 
-const MAX_LEAVES: usize = 12;
+const MAX_LEAVES: usize = 10;
 
 pub struct FallingLeaves {
     rng: Xoroshiro128StarStar,
@@ -60,7 +52,7 @@ impl FallingLeaves {
     pub fn new() -> Self {
         Self {
             rng: Xoroshiro128StarStar::seed_from_u64(0x9C63_EA21_046B_F751),
-            leaves: [Leave::new(); MAX_LEAVES]
+            leaves: [Leave::new(); MAX_LEAVES],
         }
     }
 }
@@ -88,7 +80,7 @@ impl Animation for FallingLeaves {
         display.clear();
         for leave in self.leaves.iter() {
             if leave.is_active() {
-                display.set_pixel(leave.x, leave.y, leave.value);
+                display.set_pixel(leave.x, leave.y);
             }
         }
 

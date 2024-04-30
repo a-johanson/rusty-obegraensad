@@ -1,7 +1,6 @@
 pub const DISPLAY_SIZE: usize = 16;
 pub const BIT_COUNT: usize = DISPLAY_SIZE * DISPLAY_SIZE;
 pub const BYTE_COUNT: usize = BIT_COUNT / 8;
-pub const LAYER_COUNT: usize = 3;
 
 static PIXEL_TO_BIT: [u8; BIT_COUNT] = [
     16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7,
@@ -23,13 +22,13 @@ static PIXEL_TO_BIT: [u8; BIT_COUNT] = [
 ];
 
 pub struct ObegraensadDisplay {
-    pixels: [u8; LAYER_COUNT * BYTE_COUNT]
+    pixels: [u8; BYTE_COUNT]
 }
 
 impl ObegraensadDisplay {
     pub fn new() -> Self {
         Self {
-            pixels: [0; LAYER_COUNT * BYTE_COUNT]
+            pixels: [0; BYTE_COUNT]
         }
     }
 
@@ -37,23 +36,18 @@ impl ObegraensadDisplay {
         self.pixels.fill(0);
     }
 
-    pub fn set_pixel(&mut self, x: u8, y: u8, value: u8) {
-        let last_layer_index = value as usize - 1;
-        if x >= DISPLAY_SIZE as u8 || y >= DISPLAY_SIZE as u8 || last_layer_index >= LAYER_COUNT {
+    pub fn set_pixel(&mut self, x: u8, y: u8) {
+        if x >= DISPLAY_SIZE as u8 || y >= DISPLAY_SIZE as u8 {
             return;
         }
         let pixel_index = (y << 4) | x;
         let bit_index = PIXEL_TO_BIT[pixel_index as usize];
-        let byte_offset = (bit_index >> 3) as usize;
+        let byte_index = (bit_index >> 3) as usize;
         let bit_in_byte = bit_index & 0b0000_0111;
-        let bit_mask = 1u8 << bit_in_byte;
-        for layer_index in 0..=last_layer_index {
-            self.pixels[layer_index * BYTE_COUNT + byte_offset] |= bit_mask;
-        }
+        self.pixels[byte_index] |= 1u8 << bit_in_byte;
     }
 
-    pub fn to_layer_buffer(&self, buffer: &mut [u8; LAYER_COUNT * BYTE_COUNT]) {
+    pub fn to_output_buffer(&self, buffer: &mut [u8; BYTE_COUNT]) {
         buffer.copy_from_slice(&self.pixels);
     }
 }
-
