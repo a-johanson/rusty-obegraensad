@@ -7,12 +7,12 @@ use rand_xoshiro::Xoroshiro128StarStar;
 use fugit::MicrosDurationU32;
 
 #[derive(Clone, Copy)]
-struct Leave {
+struct Leaf {
     x: u8,
     y: u8,
 }
 
-impl Leave {
+impl Leaf {
     const fn new() -> Self {
         Self {
             x: 0,
@@ -45,14 +45,14 @@ const MAX_LEAVES: usize = 10;
 
 pub struct FallingLeaves {
     rng: Xoroshiro128StarStar,
-    leaves: [Leave; MAX_LEAVES],
+    leaves: [Leaf; MAX_LEAVES],
 }
 
 impl FallingLeaves {
     pub fn new() -> Self {
         Self {
             rng: Xoroshiro128StarStar::seed_from_u64(0x9C63_EA21_046B_F751),
-            leaves: [Leave::new(); MAX_LEAVES],
+            leaves: [Leaf::new(); MAX_LEAVES],
         }
     }
 }
@@ -60,17 +60,17 @@ impl FallingLeaves {
 impl Animation for FallingLeaves {
     fn render_frame(&mut self, display: &mut ObegraensadDisplay) -> MicrosDurationU32 {
         // Move all existing leaves
-        for leave in self.leaves.iter_mut() {
-            if leave.is_active() {
-                leave.step(self.rng.next_u32());
+        for leaf in self.leaves.iter_mut() {
+            if leaf.is_active() {
+                leaf.step(self.rng.next_u32());
             }
         }
 
-        // Spawn new leave in 1/2 of cases
+        // Spawn new leaf in 1/2 of cases
         if (self.rng.next_u32() & 0b1) == 0 {
-            for leave in self.leaves.iter_mut() {
-                if !leave.is_active() {
-                    leave.init(self.rng.next_u32());
+            for leaf in self.leaves.iter_mut() {
+                if !leaf.is_active() {
+                    leaf.init(self.rng.next_u32());
                     break;
                 }
             }
@@ -78,9 +78,9 @@ impl Animation for FallingLeaves {
 
         // Draw active leaves on display
         display.clear();
-        for leave in self.leaves.iter() {
-            if leave.is_active() {
-                display.set_pixel(leave.x, leave.y);
+        for leaf in self.leaves.iter() {
+            if leaf.is_active() {
+                display.set_pixel(leaf.x, leaf.y);
             }
         }
 
