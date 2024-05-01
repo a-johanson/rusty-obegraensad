@@ -13,12 +13,12 @@ The timings for the SCT2024 are such that the Clock and Data In lines can be dri
 To latch the transmitted data to the LEDs, a short positive pulse on the Latch line is required.
 
 Note that the 16 LEDs driven by one SCT2024 are laid out in a circular pattern around each chip such that it is non-trivial to index the LEDs of the display.
-While one can derive an algorithm to compute the index of an LED, I found the algorithm not very readable and only used it to compute a look-up table to index the LEDs/pixels.
+While one can derive an algorithm to compute the index of an LED, I found the algorithm to be not very readable and only used it to compute a look-up table to index the LEDs/pixels.
 
 ## Implementing custom animations
 A custom animation for the display should implement the `animation::Animation` trait with its only method `render_frame`.
 The return value of the `render_frame` method indicates for how long this frame should be displayed.
-When implementing this method, you typically want to use `display.clear()` to erase the current contents of the display and then draw your frame using `display.set_pixel()`.
+When implementing this method, you typically want to use `display.clear()` to erase the current contents of the display and then draw your frame using `display.set_pixel(x, y)`.
 
 As of now, you then have to manually incorporate your animation into the main rendering loop in `main.rs` (e.g., by replacing `animation_leaves`).
 In the future, one could implement to use the button of the display to cycle through different animations.
