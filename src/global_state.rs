@@ -1,12 +1,11 @@
 use core::cell::RefCell;
 
-use rp_pico::hal;
-use hal::timer::{Alarm, Alarm0};
 use cortex_m::interrupt::Mutex;
+use hal::timer::{Alarm, Alarm0};
+use rp_pico::hal;
 
 use fugit::MicrosDurationU32;
 use portable_atomic::AtomicU8;
-
 
 pub static SHARED_STATE: Mutex<RefCell<Option<SharedState>>> = Mutex::new(RefCell::new(None));
 pub static ATOMIC_STATE: AtomicState = AtomicState::new();

@@ -2,6 +2,7 @@ pub const DISPLAY_SIZE: usize = 16;
 pub const BIT_COUNT: usize = DISPLAY_SIZE * DISPLAY_SIZE;
 pub const BYTE_COUNT: usize = BIT_COUNT / 8;
 
+#[rustfmt::skip]
 static PIXEL_TO_BIT: [u8; BIT_COUNT] = [
     16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7,
     31, 30, 29, 28, 27, 26, 25, 24, 15, 14, 13, 12, 11, 10, 9, 8,
@@ -22,13 +23,13 @@ static PIXEL_TO_BIT: [u8; BIT_COUNT] = [
 ];
 
 pub struct ObegraensadDisplay {
-    pixels: [u8; BYTE_COUNT]
+    pixels: [u8; BYTE_COUNT],
 }
 
 impl ObegraensadDisplay {
     pub fn new() -> Self {
         Self {
-            pixels: [0; BYTE_COUNT]
+            pixels: [0; BYTE_COUNT],
         }
     }
 

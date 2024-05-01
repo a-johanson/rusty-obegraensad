@@ -2,9 +2,9 @@ use crate::animation::Animation;
 use crate::display;
 use display::ObegraensadDisplay;
 
+use fugit::MicrosDurationU32;
 use rand::{RngCore, SeedableRng};
 use rand_xoshiro::Xoroshiro128StarStar;
-use fugit::MicrosDurationU32;
 
 #[derive(Clone, Copy)]
 struct Leaf {
@@ -14,10 +14,7 @@ struct Leaf {
 
 impl Leaf {
     const fn new() -> Self {
-        Self {
-            x: 0,
-            y: 0xFF,
-        }
+        Self { x: 0, y: 0xFF }
     }
 
     fn is_active(&self) -> bool {
@@ -33,8 +30,8 @@ impl Leaf {
         let t = (r & 0b111) as u8;
         match t {
             0..=4 => self.x += 1, // 5/8 chance to go right
-            5     => self.x -= 1, // 1/8 chance to go left
-            _     => ()           // 2/8 chance to not move horizontally
+            5 => self.x -= 1,     // 1/8 chance to go left
+            _ => (),              // 2/8 chance to not move horizontally
         }
         self.x &= 0x0F;
         self.y += 1;

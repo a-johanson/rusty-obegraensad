@@ -6,20 +6,20 @@ mod animation_leaves;
 mod display;
 mod global_state;
 
-use rp_pico::entry; // rp_pico = Board Support Package (BSP; https://github.com/rp-rs/rp-hal-boards/)
+use cortex_m::singleton;
+use embedded_hal::digital::{InputPin, OutputPin}; // General Hardware Abstraction Layer (HAL) for embedded systems (https://github.com/rust-embedded/embedded-hal)
 use panic_halt as _;
-use rp_pico::hal; // Hardware Abstraction Layer for Raspberry Silicon (higher-level drivers; https://github.com/rp-rs/rp-hal/)
-use rp_pico::hal::pac; // Peripheral Access Crate (low-level register access; https://github.com/rp-rs/rp2040-pac)
+use rp_pico::entry; // rp_pico = Board Support Package (BSP; https://github.com/rp-rs/rp-hal-boards/)
+use rp_pico::hal; // Hardware Abstraction Layer (HAL) for Raspberry Silicon (higher-level drivers; https://github.com/rp-rs/rp-hal/)
+use rp_pico::hal::dma::{single_buffer, DMAExt};
+use rp_pico::hal::gpio::{FunctionSpi, PinState};
+use rp_pico::hal::pac; // Peripheral Access Crate (PAC; low-level register access; https://github.com/rp-rs/rp2040-pac)
 use rp_pico::hal::pac::interrupt;
 use rp_pico::hal::timer::Alarm;
-use rp_pico::hal::gpio::{FunctionSpi, PinState};
-use rp_pico::hal::dma::{single_buffer, DMAExt};
 use rp_pico::hal::Clock;
-use embedded_hal::digital::{InputPin, OutputPin}; // General Hardware Abstraction Layer for embedded systems (https://github.com/rust-embedded/embedded-hal)
-use cortex_m::singleton;
 
-use portable_atomic::Ordering;
 use fugit::{MicrosDurationU32, RateExtU32};
+use portable_atomic::Ordering;
 
 use animation::Animation;
 
@@ -40,7 +40,8 @@ fn main() -> ! {
         pac.PLL_USB,
         &mut pac.RESETS,
         &mut watchdog,
-    ).unwrap();
+    )
+    .unwrap();
 
     // To make WFI more energy-efficient, we could pruning the clock tree.
     // This can be done by selecting the respective bits in a rp_pico::hal::clocks::ClockGate
@@ -98,9 +99,9 @@ fn main() -> ! {
 
     // Set up global shared state
     cortex_m::interrupt::free(|cs| {
-        global_state::SHARED_STATE.borrow(cs).replace(Some(global_state::SharedState {
-            alarm0,
-        }));
+        global_state::SHARED_STATE
+            .borrow(cs)
+            .replace(Some(global_state::SharedState { alarm0 }));
     });
 
     unsafe {
@@ -112,7 +113,7 @@ fn main() -> ! {
     let mut current_frame_duration = MicrosDurationU32::millis(10);
     let mut dma_spi_transfer = Some(dma_spi_transfer);
     loop {
-        // if the button is pressed...
+        // If the button is pressed...
         if pin_button.is_low().unwrap() {
             // freeze the animation until the button is released
             loop {
@@ -124,9 +125,16 @@ fn main() -> ! {
 
             // re-schedule the alarm
             cortex_m::interrupt::free(|cs| {
-                global_state::SHARED_STATE.borrow(cs).borrow_mut().as_mut().map(|s| s.alarm0_schedule(current_frame_duration)).unwrap();
+                global_state::SHARED_STATE
+                    .borrow(cs)
+                    .borrow_mut()
+                    .as_mut()
+                    .map(|s| s.alarm0_schedule(current_frame_duration))
+                    .unwrap();
             });
-            global_state::ATOMIC_STATE.transmit_next_frame.store(0, Ordering::Relaxed);
+            global_state::ATOMIC_STATE
+                .transmit_next_frame
+                .store(0, Ordering::Relaxed);
         }
 
         // Start to transmit the display content (current frame) via SPI fed via DMA
@@ -139,7 +147,11 @@ fn main() -> ! {
 
         // Disable the activity LED and sleep until it's time to show the next frame
         pin_led.set_low().unwrap();
-        while global_state::ATOMIC_STATE.transmit_next_frame.load(Ordering::Relaxed) == 0 {
+        while global_state::ATOMIC_STATE
+            .transmit_next_frame
+            .load(Ordering::Relaxed)
+            == 0
+        {
             cortex_m::asm::wfi();
         }
 
@@ -147,9 +159,16 @@ fn main() -> ! {
         pin_latch.set_high().unwrap();
 
         // Reset frame transmission status and re-schedule the timer to determine how long the current frame should be shown
-        global_state::ATOMIC_STATE.transmit_next_frame.store(0, Ordering::Relaxed);
+        global_state::ATOMIC_STATE
+            .transmit_next_frame
+            .store(0, Ordering::Relaxed);
         cortex_m::interrupt::free(|cs| {
-            global_state::SHARED_STATE.borrow(cs).borrow_mut().as_mut().map(|s| s.alarm0_schedule(current_frame_duration)).unwrap();
+            global_state::SHARED_STATE
+                .borrow(cs)
+                .borrow_mut()
+                .as_mut()
+                .map(|s| s.alarm0_schedule(current_frame_duration))
+                .unwrap();
         });
 
         // Enable the activity LED
@@ -167,8 +186,15 @@ fn main() -> ! {
 
 #[interrupt]
 fn TIMER_IRQ_0() {
-    global_state::ATOMIC_STATE.transmit_next_frame.store(1, Ordering::Relaxed);
+    global_state::ATOMIC_STATE
+        .transmit_next_frame
+        .store(1, Ordering::Relaxed);
     cortex_m::interrupt::free(|cs| {
-        global_state::SHARED_STATE.borrow(cs).borrow_mut().as_mut().map(|s| s.alarm0_clear_interrupt()).unwrap();
+        global_state::SHARED_STATE
+            .borrow(cs)
+            .borrow_mut()
+            .as_mut()
+            .map(|s| s.alarm0_clear_interrupt())
+            .unwrap();
     });
 }
