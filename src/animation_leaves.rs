@@ -4,7 +4,7 @@ use display::ObegraensadDisplay;
 
 use fugit::MicrosDurationU32;
 use rand::{RngCore, SeedableRng};
-use rand_xoshiro::Xoroshiro128StarStar;
+use rand_xoshiro::Xoshiro128StarStar;
 
 #[derive(Clone, Copy)]
 struct Leaf {
@@ -41,14 +41,14 @@ impl Leaf {
 const MAX_LEAVES: usize = 10;
 
 pub struct FallingLeaves {
-    rng: Xoroshiro128StarStar,
+    rng: Xoshiro128StarStar,
     leaves: [Leaf; MAX_LEAVES],
 }
 
 impl FallingLeaves {
     pub fn new() -> Self {
         Self {
-            rng: Xoroshiro128StarStar::seed_from_u64(0x9C63_EA21_046B_F751),
+            rng: Xoshiro128StarStar::seed_from_u64(0x9C63_EA21_046B_F751),
             leaves: [Leaf::new(); MAX_LEAVES],
         }
     }
@@ -56,28 +56,24 @@ impl FallingLeaves {
 
 impl Animation for FallingLeaves {
     fn render_frame(&mut self, display: &mut ObegraensadDisplay) -> MicrosDurationU32 {
-        // Move all existing leaves
+        display.clear();
+
+        // Move and draw all existing leaves
         for leaf in self.leaves.iter_mut() {
             if leaf.is_active() {
                 leaf.step(self.rng.next_u32());
+                display.set_pixel(leaf.x, leaf.y);
             }
         }
 
-        // Spawn new leaf in 1/2 of cases
+        // Spawn and draw new leaf in 1/2 of cases
         if (self.rng.next_u32() & 0b1) == 0 {
             for leaf in self.leaves.iter_mut() {
                 if !leaf.is_active() {
                     leaf.init(self.rng.next_u32());
+                    display.set_pixel(leaf.x, leaf.y);
                     break;
                 }
-            }
-        }
-
-        // Draw active leaves on display
-        display.clear();
-        for leaf in self.leaves.iter() {
-            if leaf.is_active() {
-                display.set_pixel(leaf.x, leaf.y);
             }
         }
 
