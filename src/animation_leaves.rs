@@ -38,18 +38,21 @@ impl Leaf {
     }
 }
 
-const MAX_LEAVES: usize = 10;
-
 pub struct FallingLeaves {
     rng: Xoshiro128StarStar,
-    leaves: [Leaf; MAX_LEAVES],
+    leaves: [Leaf; Self::MAX_LEAVES],
+    x_prev_frame: Option<u8>,
 }
 
 impl FallingLeaves {
+    const MAX_LEAVES: usize = 10;
+    const X_INCR: u32 = 5;
+
     pub fn new() -> Self {
         Self {
-            rng: Xoshiro128StarStar::seed_from_u64(0x9C63_EA21_046B_F751),
-            leaves: [Leaf::new(); MAX_LEAVES],
+            rng: Xoshiro128StarStar::seed_from_u64(0x4C13_D8C5_DF23_A2D7),
+            leaves: [Leaf::new(); Self::MAX_LEAVES],
+            x_prev_frame: Some(7),
         }
     }
 }
@@ -70,11 +73,20 @@ impl Animation for FallingLeaves {
         if (self.rng.next_u32() & 0b1) == 0 {
             for leaf in self.leaves.iter_mut() {
                 if !leaf.is_active() {
-                    leaf.init(self.rng.next_u32());
+                    let r = if self.x_prev_frame.is_none() {
+                        self.rng.next_u32()
+                    } else {
+                        let offset = Self::X_INCR + (self.rng.next_u32() & 0b111);
+                        self.x_prev_frame.unwrap() as u32 + offset
+                    };
+                    leaf.init(r);
+                    self.x_prev_frame = Some(leaf.x);
                     display.set_pixel(leaf.x, leaf.y);
                     break;
                 }
             }
+        } else {
+            self.x_prev_frame = None;
         }
 
         MicrosDurationU32::millis(400)
