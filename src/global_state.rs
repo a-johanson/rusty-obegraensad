@@ -10,6 +10,20 @@ use portable_atomic::AtomicU8;
 pub static SHARED_STATE: Mutex<RefCell<Option<SharedState>>> = Mutex::new(RefCell::new(None));
 pub static ATOMIC_STATE: AtomicState = AtomicState::new();
 
+pub fn shared_state_interrupt_free<F>(f: F)
+where
+    F: FnOnce(&mut SharedState)
+{
+    cortex_m::interrupt::free(|cs| {
+        SHARED_STATE
+            .borrow(cs)
+            .borrow_mut()
+            .as_mut()
+            .map(f)
+            .unwrap();
+    });
+}
+
 pub struct AtomicState {
     pub transmit_next_frame: AtomicU8,
 }

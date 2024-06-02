@@ -115,7 +115,7 @@ fn main() -> ! {
     loop {
         // If the button is pressed...
         if pin_button.is_low().unwrap() {
-            // freeze the animation until the button is released
+            // wait until the button is released
             loop {
                 delay.delay_ms(20);
                 if pin_button.is_high().unwrap() {
@@ -124,14 +124,7 @@ fn main() -> ! {
             }
 
             // re-schedule the alarm
-            cortex_m::interrupt::free(|cs| {
-                global_state::SHARED_STATE
-                    .borrow(cs)
-                    .borrow_mut()
-                    .as_mut()
-                    .map(|s| s.alarm0_schedule(current_frame_duration))
-                    .unwrap();
-            });
+            global_state::shared_state_interrupt_free(|s| s.alarm0_schedule(current_frame_duration));
             global_state::ATOMIC_STATE
                 .transmit_next_frame
                 .store(0, Ordering::Relaxed);
@@ -162,14 +155,7 @@ fn main() -> ! {
         global_state::ATOMIC_STATE
             .transmit_next_frame
             .store(0, Ordering::Relaxed);
-        cortex_m::interrupt::free(|cs| {
-            global_state::SHARED_STATE
-                .borrow(cs)
-                .borrow_mut()
-                .as_mut()
-                .map(|s| s.alarm0_schedule(current_frame_duration))
-                .unwrap();
-        });
+        global_state::shared_state_interrupt_free(|s| s.alarm0_schedule(current_frame_duration));
 
         // Enable the activity LED
         pin_led.set_high().unwrap();
@@ -189,12 +175,5 @@ fn TIMER_IRQ_0() {
     global_state::ATOMIC_STATE
         .transmit_next_frame
         .store(1, Ordering::Relaxed);
-    cortex_m::interrupt::free(|cs| {
-        global_state::SHARED_STATE
-            .borrow(cs)
-            .borrow_mut()
-            .as_mut()
-            .map(|s| s.alarm0_clear_interrupt())
-            .unwrap();
-    });
+    global_state::shared_state_interrupt_free(|s| s.alarm0_clear_interrupt());
 }
