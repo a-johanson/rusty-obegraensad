@@ -12,7 +12,7 @@ pub static ATOMIC_STATE: AtomicState = AtomicState::new();
 
 pub fn shared_state_interrupt_free<F>(f: F)
 where
-    F: FnOnce(&mut SharedState)
+    F: FnOnce(&mut SharedState),
 {
     cortex_m::interrupt::free(|cs| {
         SHARED_STATE

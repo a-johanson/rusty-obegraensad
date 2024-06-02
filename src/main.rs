@@ -113,7 +113,8 @@ fn main() -> ! {
     const ANIMATION_COUNT: usize = 2;
     let mut animation_leaves = animation_leaves::FallingLeaves::new();
     let mut animation_empty = animation_empty::EmptyAnimation::new();
-    let animations: [&mut dyn Animation; ANIMATION_COUNT] = [&mut animation_leaves, &mut animation_empty];
+    let animations: [&mut dyn Animation; ANIMATION_COUNT] =
+        [&mut animation_leaves, &mut animation_empty];
     let mut current_animation_index = 0;
     let mut current_frame_duration = MicrosDurationU32::millis(10);
     let mut dma_spi_transfer = Some(dma_spi_transfer);
@@ -137,7 +138,9 @@ fn main() -> ! {
             current_frame_duration = MicrosDurationU32::millis(30);
 
             // re-schedule the alarm
-            global_state::shared_state_interrupt_free(|s| s.alarm0_schedule(current_frame_duration));
+            global_state::shared_state_interrupt_free(|s| {
+                s.alarm0_schedule(current_frame_duration)
+            });
             global_state::ATOMIC_STATE
                 .transmit_next_frame
                 .store(0, Ordering::Relaxed);

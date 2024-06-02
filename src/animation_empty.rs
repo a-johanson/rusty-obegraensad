@@ -4,12 +4,11 @@ use display::ObegraensadDisplay;
 
 use fugit::MicrosDurationU32;
 
-
-pub struct EmptyAnimation { }
+pub struct EmptyAnimation {}
 
 impl EmptyAnimation {
     pub fn new() -> Self {
-        Self { }
+        Self {}
     }
 }
 
