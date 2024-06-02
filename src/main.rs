@@ -110,9 +110,9 @@ fn main() -> ! {
     }
 
     let mut display = display::ObegraensadDisplay::new();
-    const ANIMATION_COUNT: usize = 2;
     let mut animation_leaves = animation_leaves::FallingLeaves::new();
     let mut animation_empty = animation_empty::EmptyAnimation::new();
+    const ANIMATION_COUNT: usize = 2;
     let animations: [&mut dyn Animation; ANIMATION_COUNT] =
         [&mut animation_leaves, &mut animation_empty];
     let mut current_animation_index = 0;

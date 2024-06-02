@@ -20,9 +20,8 @@ A custom animation for the display should implement the `animation::Animation` t
 The return value of the `render_frame` method indicates for how long this frame should be displayed.
 When implementing this method, you typically want to use `display.clear()` to erase the current contents of the display and then draw your frame using `display.set_pixel(x, y)`.
 
-As of now, you then have to manually incorporate your animation into the main rendering loop in `main.rs` (e.g., by replacing `animation_leaves`).
-In the future, one could implement to use the button of the display to cycle through different animations.
-References to the different animation objects could be held in an array using dynamic dispatching.
+To show your custom animation on the display, add a mutable reference to an instance of the animation to the `animations` array in `main.rs`.
+The button of the display can be used to cycle through the different animations.
 
 ## Generating a UF2 binary
 Ensure that Rust is up-to-date, target support for `thumbv6m-none-eabi` is provided, and elf2uf2-rs is installed:
