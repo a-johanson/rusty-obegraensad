@@ -2,6 +2,7 @@
 #![no_main]
 
 mod animation;
+mod animation_empty;
 mod animation_leaves;
 mod display;
 mod global_state;
@@ -109,19 +110,31 @@ fn main() -> ! {
     }
 
     let mut display = display::ObegraensadDisplay::new();
+    const ANIMATION_COUNT: usize = 2;
     let mut animation_leaves = animation_leaves::FallingLeaves::new();
+    let mut animation_empty = animation_empty::EmptyAnimation::new();
+    let animations: [&mut dyn Animation; ANIMATION_COUNT] = [&mut animation_leaves, &mut animation_empty];
+    let mut current_animation_index = 0;
     let mut current_frame_duration = MicrosDurationU32::millis(10);
     let mut dma_spi_transfer = Some(dma_spi_transfer);
     loop {
         // If the button is pressed...
         if pin_button.is_low().unwrap() {
-            // wait until the button is released
+            // wait until the button is released...
             loop {
                 delay.delay_ms(20);
                 if pin_button.is_high().unwrap() {
                     break;
                 }
             }
+
+            // activate next animation and clear current frame
+            current_animation_index += 1;
+            if current_animation_index >= ANIMATION_COUNT {
+                current_animation_index = 0;
+            }
+            display.clear();
+            current_frame_duration = MicrosDurationU32::millis(30);
 
             // re-schedule the alarm
             global_state::shared_state_interrupt_free(|s| s.alarm0_schedule(current_frame_duration));
@@ -136,9 +149,9 @@ fn main() -> ! {
         dma_spi_transfer.replace(single_buffer::Config::new(dma_channel, dma_buffer, spi).start());
 
         // Compute the next frame
-        let next_frame_duration = animation_leaves.render_frame(&mut display);
+        let next_frame_duration = animations[current_animation_index].render_frame(&mut display);
 
-        // Disable the activity LED and sleep until it's time to show the next frame
+        // Disable the activity LED and sleep until it's time to show the current frame (and to transmit the next frame)
         pin_led.set_low().unwrap();
         while global_state::ATOMIC_STATE
             .transmit_next_frame
