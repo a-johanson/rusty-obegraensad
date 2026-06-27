@@ -73,11 +73,11 @@ impl Animation for FallingLeaves {
         if (self.rng.next_u32() & 0b1) == 0 {
             for leaf in self.leaves.iter_mut() {
                 if !leaf.is_active() {
-                    let r = if self.x_prev_frame.is_none() {
-                        self.rng.next_u32()
-                    } else {
+                    let r = if let Some(x_prev) = self.x_prev_frame {
                         let offset = Self::X_INCR + (self.rng.next_u32() & 0b111);
-                        self.x_prev_frame.unwrap() as u32 + offset
+                        x_prev as u32 + offset
+                    } else {
+                        self.rng.next_u32()
                     };
                     leaf.init(r);
                     self.x_prev_frame = Some(leaf.x);
