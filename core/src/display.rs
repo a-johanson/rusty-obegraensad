@@ -52,3 +52,9 @@ impl ObegraensadDisplay {
         buffer.copy_from_slice(&self.pixels);
     }
 }
+
+impl Default for ObegraensadDisplay {
+    fn default() -> Self {
+        Self::new()
+    }
+}

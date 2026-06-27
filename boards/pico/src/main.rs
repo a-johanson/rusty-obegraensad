@@ -1,14 +1,11 @@
 #![no_std]
 #![no_main]
 
-mod animation;
-mod animation_empty;
-mod animation_leaves;
-mod display;
 mod global_state;
 
 use cortex_m::singleton;
 use embedded_hal::digital::{InputPin, OutputPin}; // General Hardware Abstraction Layer (HAL) for embedded systems (https://github.com/rust-embedded/embedded-hal)
+use obegraensad_core::{Animation, EmptyAnimation, FallingLeaves, ObegraensadDisplay, BYTE_COUNT};
 use panic_halt as _;
 use rp_pico::entry; // rp_pico = Board Support Package (BSP; https://github.com/rp-rs/rp-hal-boards/)
 use rp_pico::hal; // Hardware Abstraction Layer (HAL) for Raspberry Silicon (higher-level drivers; https://github.com/rp-rs/rp-hal/)
@@ -21,8 +18,6 @@ use rp_pico::hal::Clock;
 
 use fugit::{MicrosDurationU32, RateExtU32};
 use portable_atomic::Ordering;
-
-use animation::Animation;
 
 // TODO: look at https://github.com/knurling-rs/flip-link
 
@@ -75,7 +70,7 @@ fn main() -> ! {
     let dma_channel = dma.ch0;
 
     // Transmit an empty buffer
-    let dma_buffer = singleton!(: [u8; display::BYTE_COUNT] = [0; display::BYTE_COUNT]).unwrap();
+    let dma_buffer = singleton!(: [u8; BYTE_COUNT] = [0; BYTE_COUNT]).unwrap();
     let dma_spi_transfer = single_buffer::Config::new(dma_channel, dma_buffer, spi).start();
 
     let core = pac::CorePeripherals::take().unwrap();
@@ -109,9 +104,9 @@ fn main() -> ! {
         pac::NVIC::unmask(pac::Interrupt::TIMER_IRQ_0);
     }
 
-    let mut display = display::ObegraensadDisplay::new();
-    let mut animation_leaves = animation_leaves::FallingLeaves::new();
-    let mut animation_empty = animation_empty::EmptyAnimation::new();
+    let mut display = ObegraensadDisplay::new();
+    let mut animation_leaves = FallingLeaves::new();
+    let mut animation_empty = EmptyAnimation::new();
     const ANIMATION_COUNT: usize = 2;
     let animations: [&mut dyn Animation; ANIMATION_COUNT] =
         [&mut animation_leaves, &mut animation_empty];
