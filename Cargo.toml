@@ -1,7 +1,7 @@
 [package]
 name = "rusty-obegraensad"
 version = "0.1.0"
-authors = ["Ane Johanson"]
+authors = ["Ane Johanson", "Willem Roovers"]
 description = "Display custom animations on IKEA's OBEGRÄNSAD using Rust on the Raspberry Pi Pico"
 edition = "2021"
 
