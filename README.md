@@ -37,27 +37,14 @@ When implementing this method, you typically want to use `display.clear()` to er
 To show your custom animation on the display, add it to `core` or another crate and add a mutable reference to an instance of the animation to the `animations` array in `boards/pico/src/main.rs`.
 The button of the display can be used to cycle through the different animations.
 
-## Generating a UF2 binary
-Ensure that Rust is up-to-date, target support for `thumbv6m-none-eabi` is provided, and elf2uf2-rs is installed:
+## Building and flashing
+Ensure that Rust is up-to-date and target support for `thumbv6m-none-eabi` is provided:
 ```
 rustup self update
 rustup update stable
 rustup target add thumbv6m-none-eabi
-cargo install elf2uf2-rs
 ```
 
-Execute `cargo run -p obegraensad-pico --release` to generate the UF2 binary at `target/thumbv6m-none-eabi/release/obegraensad-pico.uf2`.
+Furthermore, make sure that [`picotool`](https://github.com/raspberrypi/picotool) is on the PATH.
 
-## git setup
-
-### GitHub noreply email
-```
-git config user.name "a-johanson"
-git config user.email "a-johanson@users.noreply.github.com"
-```
-
-### GitHub tokens
-```
-git remote add origin https://a-johanson:<TOKEN>@github.com/a-johanson/rusty-obegraensad.git
-git push -u origin master
-```
+Execute `cargo run --release` to flash a Raspberry Pi Pico connected via USB in BOOTSEL mode.
