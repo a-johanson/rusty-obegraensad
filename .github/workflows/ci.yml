@@ -2,10 +2,10 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
   schedule:
     - cron: '14 3 1 * *'  # Monthly on the 1st at 03:14 UTC
   workflow_dispatch:
