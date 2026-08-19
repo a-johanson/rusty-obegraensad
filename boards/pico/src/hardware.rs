@@ -41,6 +41,11 @@ where
 
     fn latch(&mut self) -> Result<(), Self::Error> {
         self.latch.set_high()?;
+        // The SCT2024 requires a latch pulse of at least 20 ns. The Pico runs
+        // at 125 MHz (8 ns/cycle), so keep the pin high for four full cycles
+        // (32 ns) rather than relying on surrounding instructions for timing.
+        cortex_m::asm::nop();
+        cortex_m::asm::nop();
         cortex_m::asm::nop();
         cortex_m::asm::nop();
         self.latch.set_low()
