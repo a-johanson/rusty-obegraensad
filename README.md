@@ -1,6 +1,20 @@
 # Rusty OBEGRÄNSAD
 Display custom animations on IKEA's OBEGRÄNSAD using Rust on the Raspberry Pi Pico.
 
+## Crates
+This repository is split into a Cargo workspace with separate portable and board-specific crates:
+
+- `core`: `no_std` display buffer, OBEGRÄNSAD pixel mapping, animation trait, built-in animations, and hardware boundary traits.
+- `boards/pico`: Raspberry Pi Pico firmware. This crate owns RP2040 startup, GPIO, SPI, DMA, timer interrupts, and the concrete animation loop.
+
+The boundary between portable code and board code is intentionally small:
+
+- `animation::Animation` renders the next frame into `ObegraensadDisplay` and returns its frame duration.
+- `hardware::DisplayDriver` describes the board-specific transport for writing, latching, and enabling the physical display.
+- `hardware::AnimationSelect` describes board-specific input used to switch animations.
+
+Future ESP32-C6 or ESP32-S3 support should be added as another board crate that depends on `obegraensad-core`.
+
 ## Interfacing with OBEGRÄNSAD
 OBEGRÄNSAD consists of 16 daisy-chained SCT2024 16 bit serial-in/parallel-out constant-current LED drivers.
 After de-soldering the on-board microcontroller, the Raspberry Pi Pico can be connected to the Clock, Data In, Latch, and inverted Enable inputs of the SCT2024 chain.
@@ -16,11 +30,11 @@ Note that the 16 LEDs driven by one SCT2024 are laid out in a circular pattern a
 While one can derive an algorithm to compute the index of an LED, I found the algorithm to be not very readable and only used it to compute a look-up table to index the LEDs/pixels.
 
 ## Implementing custom animations
-A custom animation for the display should implement the `animation::Animation` trait with its only method `render_frame`.
+A custom animation for the display should implement the `obegraensad_core::Animation` trait with its only method `render_frame`.
 The return value of the `render_frame` method indicates for how long this frame should be displayed.
 When implementing this method, you typically want to use `display.clear()` to erase the current contents of the display and then draw your frame using `display.set_pixel(x, y)`.
 
-To show your custom animation on the display, add a mutable reference to an instance of the animation to the `animations` array in `main.rs`.
+To show your custom animation on the display, add it to `core` or another crate and add a mutable reference to an instance of the animation to the `animations` array in `boards/pico/src/main.rs`.
 The button of the display can be used to cycle through the different animations.
 
 ## Building and flashing

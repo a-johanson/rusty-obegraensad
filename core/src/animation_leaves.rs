@@ -57,6 +57,12 @@ impl FallingLeaves {
     }
 }
 
+impl Default for FallingLeaves {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Animation for FallingLeaves {
     fn render_frame(&mut self, display: &mut ObegraensadDisplay) -> MicrosDurationU32 {
         display.clear();

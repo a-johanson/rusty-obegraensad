@@ -12,6 +12,12 @@ impl EmptyAnimation {
     }
 }
 
+impl Default for EmptyAnimation {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Animation for EmptyAnimation {
     fn render_frame(&mut self, display: &mut ObegraensadDisplay) -> MicrosDurationU32 {
         display.clear();
