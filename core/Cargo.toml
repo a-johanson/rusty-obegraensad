@@ -1,0 +1,11 @@
+[package]
+name = "obegraensad-core"
+version.workspace = true
+authors.workspace = true
+description = "Portable display model and animations for IKEA's OBEGRÄNSAD LED display"
+edition.workspace = true
+
+[dependencies]
+fugit.workspace = true
+rand.workspace = true
+rand_xoshiro.workspace = true

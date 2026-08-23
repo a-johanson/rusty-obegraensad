@@ -1,14 +1,16 @@
 #![no_std]
 #![no_main]
 
-mod animation;
-mod animation_empty;
-mod animation_leaves;
-mod display;
 mod global_state;
+mod hardware;
 
 use cortex_m::singleton;
-use embedded_hal::digital::{InputPin, OutputPin}; // General Hardware Abstraction Layer (HAL) for embedded systems (https://github.com/rust-embedded/embedded-hal)
+use embedded_hal::digital::OutputPin; // General Hardware Abstraction Layer (HAL) for embedded systems (https://github.com/rust-embedded/embedded-hal)
+use hardware::{ActiveLowButton, PicoDisplay};
+use obegraensad_core::{
+    hardware::{AnimationSelect, DisplayDriver},
+    Animation, EmptyAnimation, FallingLeaves, ObegraensadDisplay, BYTE_COUNT,
+};
 use panic_halt as _;
 use rp_pico::entry; // rp_pico = Board Support Package (BSP; https://github.com/rp-rs/rp-hal-boards/)
 use rp_pico::hal; // Hardware Abstraction Layer (HAL) for Raspberry Silicon (higher-level drivers; https://github.com/rp-rs/rp-hal/)
@@ -21,8 +23,6 @@ use rp_pico::hal::Clock;
 
 use fugit::{MicrosDurationU32, RateExtU32};
 use portable_atomic::Ordering;
-
-use animation::Animation;
 
 // TODO: look at https://github.com/knurling-rs/flip-link
 
@@ -56,10 +56,10 @@ fn main() -> ! {
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-    let mut pin_not_enable = pins.gpio20.into_push_pull_output_in_state(PinState::High);
-    let mut pin_button = pins.gpio22.into_pull_up_input();
+    let pin_not_enable = pins.gpio20.into_push_pull_output_in_state(PinState::High);
+    let pin_button = pins.gpio22.into_pull_up_input();
     let mut pin_led = pins.led.into_push_pull_output_in_state(PinState::High);
-    let mut pin_latch = pins.gpio21.into_push_pull_output_in_state(PinState::Low);
+    let pin_latch = pins.gpio21.into_push_pull_output_in_state(PinState::Low);
 
     let pin_clock = pins.gpio18.into_function::<FunctionSpi>();
     let pin_data = pins.gpio19.into_function::<FunctionSpi>();
@@ -75,8 +75,17 @@ fn main() -> ! {
     let dma_channel = dma.ch0;
 
     // Transmit an empty buffer
-    let dma_buffer = singleton!(: [u8; display::BYTE_COUNT] = [0; display::BYTE_COUNT]).unwrap();
+    let dma_buffer = singleton!(: [u8; BYTE_COUNT] = [0; BYTE_COUNT]).unwrap();
     let dma_spi_transfer = single_buffer::Config::new(dma_channel, dma_buffer, spi).start();
+    let mut dma_spi_transfer = Some(dma_spi_transfer);
+    let frame_writer = move |display: &ObegraensadDisplay| {
+        let (dma_channel, dma_buffer, spi) = dma_spi_transfer.take().unwrap().wait();
+        display.to_output_buffer(dma_buffer);
+        dma_spi_transfer.replace(single_buffer::Config::new(dma_channel, dma_buffer, spi).start());
+        Ok::<(), core::convert::Infallible>(())
+    };
+    let mut display_driver = PicoDisplay::new(frame_writer, pin_latch, pin_not_enable);
+    let mut animation_select = ActiveLowButton::new(pin_button);
 
     let core = pac::CorePeripherals::take().unwrap();
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
@@ -85,18 +94,15 @@ fn main() -> ! {
     delay.delay_ms(10);
 
     // Latch the (now empty) display content
-    pin_latch.set_high().unwrap();
+    display_driver.latch().unwrap();
 
     let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.enable_interrupt();
     alarm0.schedule(MicrosDurationU32::millis(10)).unwrap();
 
-    // Finish latch pulse and enable the display
-    cortex_m::asm::nop();
-    cortex_m::asm::nop();
-    pin_latch.set_low().unwrap();
-    pin_not_enable.set_low().unwrap();
+    // Enable the display after the empty frame has been latched.
+    display_driver.set_enabled(true).unwrap();
 
     // Set up global shared state
     cortex_m::interrupt::free(|cs| {
@@ -109,22 +115,21 @@ fn main() -> ! {
         pac::NVIC::unmask(pac::Interrupt::TIMER_IRQ_0);
     }
 
-    let mut display = display::ObegraensadDisplay::new();
-    let mut animation_leaves = animation_leaves::FallingLeaves::new();
-    let mut animation_empty = animation_empty::EmptyAnimation::new();
+    let mut display = ObegraensadDisplay::new();
+    let mut animation_leaves = FallingLeaves::new();
+    let mut animation_empty = EmptyAnimation::new();
     const ANIMATION_COUNT: usize = 2;
     let animations: [&mut dyn Animation; ANIMATION_COUNT] =
         [&mut animation_leaves, &mut animation_empty];
     let mut current_animation_index = 0;
     let mut current_frame_duration = MicrosDurationU32::millis(10);
-    let mut dma_spi_transfer = Some(dma_spi_transfer);
     loop {
         // If the button is pressed...
-        if pin_button.is_low().unwrap() {
+        if animation_select.is_selected().unwrap() {
             // wait until the button is released...
             loop {
                 delay.delay_ms(20);
-                if pin_button.is_high().unwrap() {
+                if !animation_select.is_selected().unwrap() {
                     break;
                 }
             }
@@ -147,9 +152,7 @@ fn main() -> ! {
         }
 
         // Start to transmit the display content (current frame) via SPI fed via DMA
-        let (dma_channel, dma_buffer, spi) = dma_spi_transfer.take().unwrap().wait();
-        display.to_output_buffer(dma_buffer);
-        dma_spi_transfer.replace(single_buffer::Config::new(dma_channel, dma_buffer, spi).start());
+        display_driver.write_frame(&display).unwrap();
 
         // Compute the next frame
         let next_frame_duration = animations[current_animation_index].render_frame(&mut display);
@@ -164,8 +167,8 @@ fn main() -> ! {
             cortex_m::asm::wfi();
         }
 
-        // Start pulsing the latch pin to show the current frame
-        pin_latch.set_high().unwrap();
+        // Latch the transmitted frame to show it on the display.
+        display_driver.latch().unwrap();
 
         // Reset frame transmission status and re-schedule the timer to determine how long the current frame should be shown
         global_state::ATOMIC_STATE
@@ -178,11 +181,6 @@ fn main() -> ! {
 
         // Ensure that upon the next transmission cycle, we display the next frame for the designated amount of time
         current_frame_duration = next_frame_duration;
-
-        // Finish the latch pulse
-        cortex_m::asm::nop();
-        cortex_m::asm::nop();
-        pin_latch.set_low().unwrap();
     }
 }
 
