@@ -9,4 +9,4 @@ pub mod hardware;
 pub use animation::Animation;
 pub use animation_empty::EmptyAnimation;
 pub use animation_leaves::FallingLeaves;
-pub use display::{ObegraensadDisplay, BYTE_COUNT, DISPLAY_SIZE};
+pub use display::{BYTE_COUNT, DISPLAY_SIZE, ObegraensadDisplay};

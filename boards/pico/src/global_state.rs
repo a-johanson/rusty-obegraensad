@@ -42,7 +42,9 @@ pub struct SharedState {
 
 impl SharedState {
     pub fn alarm0_schedule(&mut self, duration: MicrosDurationU32) {
-        self.alarm0.schedule(duration).unwrap();
+        self.alarm0
+            .schedule(hal::fugit::MicrosDurationU32::micros(duration.as_ticks()))
+            .unwrap();
     }
 
     pub fn alarm0_clear_interrupt(&mut self) {

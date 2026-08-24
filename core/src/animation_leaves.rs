@@ -3,7 +3,7 @@ use crate::display;
 use display::ObegraensadDisplay;
 
 use fugit::MicrosDurationU32;
-use rand::{RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_xoshiro::Xoshiro128StarStar;
 
 #[derive(Clone, Copy)]
@@ -95,6 +95,6 @@ impl Animation for FallingLeaves {
             self.x_prev_frame = None;
         }
 
-        MicrosDurationU32::millis(400)
+        MicrosDurationU32::from_millis(400)
     }
 }

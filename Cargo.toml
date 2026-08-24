@@ -6,10 +6,10 @@ resolver = "2"
 version = "0.1.0"
 authors = ["Ane Johanson", "Willem Roovers"]
 description = "Display custom animations on IKEA's OBEGRÄNSAD using Rust on the Raspberry Pi Pico"
-edition = "2021"
+edition = "2024"
 
 [workspace.dependencies]
 embedded-hal = "1.0"
-fugit = "0.3"
-rand = { version = "0.8", default-features = false }
-rand_xoshiro = "0.6"
+fugit = "0.5"
+rand = { version = "0.10", default-features = false }
+rand_xoshiro = "0.8"

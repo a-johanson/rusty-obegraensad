@@ -21,6 +21,6 @@ impl Default for EmptyAnimation {
 impl Animation for EmptyAnimation {
     fn render_frame(&mut self, display: &mut ObegraensadDisplay) -> MicrosDurationU32 {
         display.clear();
-        MicrosDurationU32::millis(500)
+        MicrosDurationU32::from_millis(500)
     }
 }
