@@ -1,4 +1,5 @@
 name: CI
+
 on:
   push:
     branches:
@@ -7,34 +8,89 @@ on:
     branches:
       - main
   schedule:
-    - cron: '14 3 1 * *'  # Monthly on the 1st at 03:14 UTC
+    - cron: "14 3 1 * *" # Monthly on the 1st at 03:14 UTC
   workflow_dispatch:
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  rust:
-    name: fmt, check, build, clippy
+  core:
+    name: Core
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
-          targets: thumbv6m-none-eabi
 
+      # Formatting is target-independent, so check the entire workspace once.
       - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Check
-        run: cargo check --release --locked
+        run: cargo check --release --locked --package obegraensad-core --target x86_64-unknown-linux-gnu
 
-      - name: Check linting
-        run: cargo clippy --release --locked -- -D warnings
+      - name: Build
+        run: cargo build --release --locked --package obegraensad-core --target x86_64-unknown-linux-gnu
+
+      - name: Clippy
+        run: cargo clippy --release --locked --package obegraensad-core --target x86_64-unknown-linux-gnu -- -D warnings
+
+  pico:
+    name: Raspberry Pi Pico
+    needs: core
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: thumbv6m-none-eabi
+
+      - name: Check
+        run: cargo check --release --locked --package obegraensad-pico
+
+      - name: Build
+        run: cargo build --release --locked --package obegraensad-pico
+
+      - name: Clippy
+        run: cargo clippy --release --locked --package obegraensad-pico -- -D warnings
+
+  esp32-s3:
+    name: ESP32-S3-DevKitC-1
+    needs: core
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    defaults:
+      run:
+        working-directory: boards/esp32-s3-devkit-c-1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Rust for Xtensa
+        uses: esp-rs/xtensa-toolchain@v1.7
+        with:
+          buildtargets: esp32s3
+          ldproxy: false
+
+      - name: Check
+        run: cargo check --release --locked
 
       - name: Build
         run: cargo build --release --locked
+
+      - name: Clippy
+        run: cargo clippy --release --locked -- -D warnings
