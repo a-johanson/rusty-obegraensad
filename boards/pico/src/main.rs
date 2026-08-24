@@ -8,21 +8,22 @@ use cortex_m::singleton;
 use embedded_hal::digital::OutputPin; // General Hardware Abstraction Layer (HAL) for embedded systems (https://github.com/rust-embedded/embedded-hal)
 use hardware::{ActiveLowButton, PicoDisplay};
 use obegraensad_core::{
+    Animation, BYTE_COUNT, EmptyAnimation, FallingLeaves, ObegraensadDisplay,
     hardware::{AnimationSelect, DisplayDriver},
-    Animation, EmptyAnimation, FallingLeaves, ObegraensadDisplay, BYTE_COUNT,
 };
 use panic_halt as _;
 use rp_pico::entry; // rp_pico = Board Support Package (BSP; https://github.com/rp-rs/rp-hal-boards/)
 use rp_pico::hal; // Hardware Abstraction Layer (HAL) for Raspberry Silicon (higher-level drivers; https://github.com/rp-rs/rp-hal/)
-use rp_pico::hal::dma::{single_buffer, DMAExt};
+use rp_pico::hal::Clock;
+use rp_pico::hal::dma::{DMAExt, single_buffer};
 use rp_pico::hal::gpio::{FunctionSpi, PinState};
 use rp_pico::hal::pac; // Peripheral Access Crate (PAC; low-level register access; https://github.com/rp-rs/rp2040-pac)
 use rp_pico::hal::pac::interrupt;
 use rp_pico::hal::timer::Alarm;
-use rp_pico::hal::Clock;
 
-use fugit::{MicrosDurationU32, RateExtU32};
+use fugit::MicrosDurationU32;
 use portable_atomic::Ordering;
+use rp_pico::hal::fugit::RateExtU32;
 
 // TODO: look at https://github.com/knurling-rs/flip-link
 
@@ -99,7 +100,9 @@ fn main() -> ! {
     let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut alarm0 = timer.alarm_0().unwrap();
     alarm0.enable_interrupt();
-    alarm0.schedule(MicrosDurationU32::millis(10)).unwrap();
+    alarm0
+        .schedule(hal::fugit::MicrosDurationU32::millis(10))
+        .unwrap();
 
     // Enable the display after the empty frame has been latched.
     display_driver.set_enabled(true).unwrap();
@@ -122,7 +125,7 @@ fn main() -> ! {
     let animations: [&mut dyn Animation; ANIMATION_COUNT] =
         [&mut animation_leaves, &mut animation_empty];
     let mut current_animation_index = 0;
-    let mut current_frame_duration = MicrosDurationU32::millis(10);
+    let mut current_frame_duration = MicrosDurationU32::from_millis(10);
     loop {
         // If the button is pressed...
         if animation_select.is_selected().unwrap() {
@@ -140,7 +143,7 @@ fn main() -> ! {
                 current_animation_index = 0;
             }
             display.clear();
-            current_frame_duration = MicrosDurationU32::millis(30);
+            current_frame_duration = MicrosDurationU32::from_millis(30);
 
             // re-schedule the alarm
             global_state::shared_state_interrupt_free(|s| {

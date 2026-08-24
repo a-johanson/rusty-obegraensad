@@ -2,8 +2,8 @@ use core::convert::Infallible;
 
 use embedded_hal::digital::{InputPin, OutputPin};
 use obegraensad_core::{
-    hardware::{AnimationSelect, DisplayDriver},
     ObegraensadDisplay,
+    hardware::{AnimationSelect, DisplayDriver},
 };
 
 /// Pico-specific adapter for the display transport and control pins.
