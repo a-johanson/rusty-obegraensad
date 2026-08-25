@@ -1,0 +1,8 @@
+[build]
+target = "xtensa-esp32s3-none-elf"
+
+[unstable]
+build-std = ["core"]
+
+[target.xtensa-esp32s3-none-elf]
+runner = "espflash flash --before usb-reset --after watchdog-reset"

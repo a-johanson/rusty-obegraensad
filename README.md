@@ -6,6 +6,7 @@ This repository is split into a Cargo workspace with separate portable and board
 
 - `core`: `no_std` display buffer, OBEGRÄNSAD pixel mapping, animation trait, built-in animations, and hardware boundary traits.
 - `boards/pico`: Raspberry Pi Pico firmware. This crate owns RP2040 startup, GPIO, SPI, DMA, timer interrupts, and the concrete animation loop.
+- `boards/esp32-s3-devkit-c-1`: ESP32-S3-DevKitC-1 firmware using GPIO outputs for the display interface.
 
 The boundary between portable code and board code is intentionally small:
 
@@ -48,3 +49,40 @@ rustup target add thumbv6m-none-eabi
 Furthermore, make sure that [`picotool`](https://github.com/raspberrypi/picotool) is on the PATH.
 
 Execute `cargo run --release` to flash a Raspberry Pi Pico connected via USB in BOOTSEL mode.
+
+### ESP32-S3-DevKitC-1
+
+#### Pinout
+
+| Signal | ESP32-S3 pin | Direction | OBEGRÄNSAD signal | Notes |
+| --- | --- | --- | --- | --- |
+| Clock | GPIO12 | Output | **CLK** | Idle low |
+| Data In | GPIO11 | Output | **IN** | Serial display data |
+| Latch | GPIO10 | Output | **CLA** | Positive pulse latches a frame |
+| Enable | GPIO9 | Output | **EN** | Active low (`/OE`); starts high to keep the display disabled |
+| Button | GPIO4 | Input | Button | Animation select Active-low button; connect other side to GND |
+| GND | GND | — | **GND** | Common ground with the display and level shifter |
+| 5V | 5V | — | **VCC** | Supply voltage from display | 
+
+The ESP32-S3 GPIO signals are 3.3 V. Use the level shifter described above when connecting them to
+the display's 5 V logic inputs.
+
+Install the Espressif Rust toolchain with [`espup`](https://github.com/esp-rs/espup) and install
+[`espflash`](https://github.com/esp-rs/espflash). Build and flash from the board directory so Cargo
+uses its Xtensa target configuration:
+
+```sh
+source ~/export-esp.sh
+cd boards/esp32-s3-devkit-c-1
+cargo run --release
+```
+
+The export script must be sourced once in each new shell, or from your shell startup file, so the
+Espressif linker is available on `PATH`.
+
+The animation-select button uses GPIO4 with its internal pull-up enabled. Connect the button between
+GPIO4 and ground; avoid GPIO0 because it selects the ROM download boot mode when held low at reset.
+
+The workspace defaults to the portable core and Pico crates because Cargo cannot compile the ARM
+and Xtensa board crates together in one invocation. Use `cargo check --workspace` only when passing
+an explicit target and selecting compatible packages.

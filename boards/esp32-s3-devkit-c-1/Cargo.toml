@@ -1,0 +1,20 @@
+[package]
+name = "obegraensad-esp32-s3-devkit-c-1"
+version.workspace = true
+authors.workspace = true
+description = "ESP32-S3-DevKitC-1 firmware for IKEA's OBEGRÄNSAD LED display"
+edition.workspace = true
+
+[[bin]]
+name = "obegraensad-esp32-s3-devkit-c-1"
+path = "src/main.rs"
+
+[dependencies]
+embedded-hal.workspace = true
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32s3"] }
+esp-hal = { version = "1.1.1", features = ["esp32s3"] }
+# esp-rom-sys 0.1.5 requires a newer compiler than the current Espressif
+# Xtensa toolchain. Keep the compatible transitive dependency selected.
+esp-rom-sys = { version = "=0.1.4", features = ["esp32s3"] }
+fugit.workspace = true
+obegraensad-core = { path = "../../core" }
