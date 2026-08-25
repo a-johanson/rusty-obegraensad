@@ -52,6 +52,21 @@ Execute `cargo run --release` to flash a Raspberry Pi Pico connected via USB in 
 
 ### ESP32-S3-DevKitC-1
 
+#### Pinout
+
+| Signal | ESP32-S3 pin | Direction | OBEGRÄNSAD signal | Notes |
+| --- | --- | --- | --- | --- |
+| Clock | GPIO12 | Output | **CLK** | Idle low |
+| Data In | GPIO11 | Output | **IN** | Serial display data |
+| Latch | GPIO10 | Output | **CLA** | Positive pulse latches a frame |
+| Enable | GPIO9 | Output | **EN** | Active low (`/OE`); starts high to keep the display disabled |
+| Button | GPIO4 | Input | Button | Animation select Active-low button; connect other side to GND |
+| GND | GND | — | **GND** | Common ground with the display and level shifter |
+| 5V | 5V | — | **VCC** | Supply voltage from display | 
+
+The ESP32-S3 GPIO signals are 3.3 V. Use the level shifter described above when connecting them to
+the display's 5 V logic inputs.
+
 Install the Espressif Rust toolchain with [`espup`](https://github.com/esp-rs/espup) and install
 [`espflash`](https://github.com/esp-rs/espflash). Build and flash from the board directory so Cargo
 uses its Xtensa target configuration:
